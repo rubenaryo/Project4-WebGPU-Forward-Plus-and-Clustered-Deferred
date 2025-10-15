@@ -13,7 +13,9 @@ struct LightSet {
 // TODO-2: you may want to create a ClusterSet struct similar to LightSet
 struct Cluster
 {
-    color: vec3f // Debug
+    color: vec3f, // Debug
+    numLights: u32,
+    lights: array<u32, 512>
 }
 
 struct ClusterSet
@@ -25,7 +27,10 @@ struct ClusterSet
 struct CameraUniforms {
     // 1.3: add an entry for the view proj mat (of type mat4x4f)
     viewProj: mat4x4f,
-    resolution: vec2f
+    invViewProj: mat4x4f,
+    resolution: vec2f,
+    near: f32,
+    far: f32
 }
 
 // CHECKITOUT: this special attenuation function ensures lights don't affect geometry outside the maximum light radius

@@ -18,6 +18,7 @@ export class Lights {
     static readonly numFloatsPerLight = 8; // vec3f is aligned at 16 byte boundaries
 
     static readonly lightIntensity = 0.1;
+    static readonly maxLightsPerCluster = 512;
 
     lightsArray = new Float32Array(Lights.maxNumLights * Lights.numFloatsPerLight);
     lightSetStorageBuffer: GPUBuffer;
@@ -101,7 +102,7 @@ export class Lights {
 
         // 2: initialize layouts, pipelines, textures, etc. needed for light clustering here
         const MAX_CLUSTERS = shaders.constants.clusterCountX * shaders.constants.clusterCountY * shaders.constants.clusterCountZ;
-        const CLUSTER_FLOAT_COUNT = 4;
+        const CLUSTER_FLOAT_COUNT = Lights.maxLightsPerCluster + 4 + 4;
         this.clusterSetArray = new Float32Array(MAX_CLUSTERS * CLUSTER_FLOAT_COUNT);
         this.clusterSetStorageBuffer = device.createBuffer({
             label: "clusterSet",
@@ -116,6 +117,11 @@ export class Lights {
                     binding: 0,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: {type: "uniform"}
+                },
+                { // light set
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: {type: "read-only-storage"}
                 },
                 { // cluster set
                     binding: 2,
@@ -132,6 +138,10 @@ export class Lights {
                 {
                     binding: 0,
                     resource: { buffer: camera.uniformsBuffer }
+                },
+                {
+                    binding: 1,
+                    resource: { buffer: this.lightSetStorageBuffer }
                 },
                 {
                     binding: 2,
@@ -171,7 +181,7 @@ export class Lights {
     }
 
     doLightClustering(encoder: GPUCommandEncoder) {
-        // TODO-2: run the light clustering compute pass(es) here
+        // 2: run the light clustering compute pass(es) here
         // implementing clustering here allows for reusing the code in both Forward+ and Clustered Deferred
         const computePass = encoder.beginComputePass();
         computePass.setPipeline(this.clusteringComputePipeline);

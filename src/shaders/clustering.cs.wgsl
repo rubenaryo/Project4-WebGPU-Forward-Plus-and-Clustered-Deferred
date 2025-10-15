@@ -1,6 +1,5 @@
-// TODO-2: implement the light clustering compute shader
-
 @group(${bindGroup_scene}) @binding(0) var<uniform> camUniforms: CameraUniforms;
+@group(${bindGroup_scene}) @binding(1) var<storage, read> lightSet: LightSet;
 @group(${bindGroup_scene}) @binding(2) var<storage, read_write> clusterSet: ClusterSet;
 
 // ------------------------------------
@@ -42,15 +41,33 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     //let clusterIndex = globalIdx.z + globalIdx.y * numClustersZ + globalIdx.x * numClustersY * numClustersZ;
     let clusterIndex = globalIdx.x + (globalIdx.y * numClustersX) + globalIdx.z * (numClustersX * numClustersY);
 
+    let near = camUniforms.near;
+    let far = camUniforms.far;
+
     let resolution = camUniforms.resolution;
     let tileSizeX = resolution.x / numClustersX;
     let tileSizeY = resolution.y / numClustersY;
+    let tileSizeZ = (far - near) / numClustersZ;
 
+    // In Screen Space
+    let clusterMinX = f32(globalIdx.x) * tileSizeX;
+    let clusterMaxX = f32(globalIdx.x+1) * tileSizeX;
 
+    let clusterMinY = f32(globalIdx.y) * tileSizeY;
+    let clusterMaxY = f32(globalIdx.y+1) * tileSizeY;
+
+    let clusterMinZ = f32(globalIdx.z) * tileSizeZ;
+    let clusterMaxZ = f32(globalIdx.z+1) * tileSizeZ;
+
+    // Convert to View Space
+    let clusterMin = camUniforms.invViewProj * vec4(clusterMinX, clusterMinY, clusterMinZ, 1.0);
+    let clusterMax = camUniforms.invViewProj * vec4(clusterMaxX, clusterMaxY, clusterMaxZ, 1.0);
+
+    //clusterSet.clusters[clusterIndex]
 
     let debugR = f32(globalIdx.x)/f32(numClustersX);
     let debugG = f32(globalIdx.y)/f32(numClustersY);
     let debugB = f32(globalIdx.z)/f32(numClustersZ);
 
-    clusterSet.clusters[clusterIndex].color = vec3f(debugR, debugG, 0.0);
+    clusterSet.clusters[clusterIndex].color = vec3f(debugR, debugG, debugB);
 }

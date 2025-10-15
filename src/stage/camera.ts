@@ -2,10 +2,13 @@ import { Mat4, mat4, Vec3, vec3 } from "wgpu-matrix";
 import { toRadians } from "../math_util";
 import { device, canvas, fovYDegrees, aspectRatio } from "../renderer";
 
-const CameraUniformsValues = new ArrayBuffer(80);
+const CameraUniformsValues = new ArrayBuffer(144);
 class CameraUniformsViews {
     private readonly viewProj = new Float32Array(CameraUniformsValues, 0, 16);
-    private readonly resolution = new Float32Array(CameraUniformsValues, 64, 2);
+    private readonly invViewProj = new Float32Array(CameraUniformsValues, 64, 16);
+    private readonly resolution = new Float32Array(CameraUniformsValues, 128, 2);
+    private readonly near = new Float32Array(CameraUniformsValues, 136, 1);
+    private readonly far = new Float32Array(CameraUniformsValues, 140, 1);
 
     setViewProj(mat: Float32Array) {
         // 1.1: set the first 16 elements of `this.floatView` to the input `mat`
@@ -15,10 +18,27 @@ class CameraUniformsViews {
         }
     }
 
+    setInvViewProj(mat: Float32Array) {
+        for (let i = 0; i != 16; ++i)
+        {
+            this.invViewProj[i] = mat[i];
+        }
+    }
+
     setResolution(w:number, h:number)
     {
         this.resolution[0] = w;
         this.resolution[1] = h;
+    }
+
+    setNear(n:number)
+    {
+        this.near[0] = n;
+    }
+
+    setFar(f:number)
+    {
+        this.far[0] = f;
     }
 
     // TODO-2: add extra functions to set values needed for light clustering here
@@ -58,6 +78,8 @@ export class Camera {
         
         // TODO: reset on canvas resize?
         this.uniforms.setResolution(canvas.width, canvas.height);
+        this.uniforms.setNear(Camera.nearPlane);
+        this.uniforms.setFar(Camera.farPlane);
 
         this.rotateCamera(0, 0); // set initial camera vectors
 
@@ -148,6 +170,7 @@ export class Camera {
         const viewProjMat = mat4.mul(this.projMat, viewMat);
         // 1.1: set `this.uniforms.viewProjMat` to the newly calculated view proj mat
         this.uniforms.setViewProj(viewProjMat);
+        this.uniforms.setInvViewProj(mat4.inverse(viewProjMat));
 
         // TODO-2: write to extra buffers needed for light clustering here
 
