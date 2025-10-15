@@ -2,23 +2,30 @@ import { Mat4, mat4, Vec3, vec3 } from "wgpu-matrix";
 import { toRadians } from "../math_util";
 import { device, canvas, fovYDegrees, aspectRatio } from "../renderer";
 
-class CameraUniforms {
-    readonly buffer = new ArrayBuffer(16 * 4);
-    private readonly floatView = new Float32Array(this.buffer);
+const CameraUniformsValues = new ArrayBuffer(80);
+class CameraUniformsViews {
+    private readonly viewProj = new Float32Array(CameraUniformsValues, 0, 16);
+    private readonly resolution = new Float32Array(CameraUniformsValues, 64, 2);
 
-    set viewProjMat(mat: Float32Array) {
+    setViewProj(mat: Float32Array) {
         // 1.1: set the first 16 elements of `this.floatView` to the input `mat`
         for (let i = 0; i != 16; ++i)
         {
-            this.floatView[i] = mat[i];
+            this.viewProj[i] = mat[i];
         }
+    }
+
+    setResolution(w:number, h:number)
+    {
+        this.resolution[0] = w;
+        this.resolution[1] = h;
     }
 
     // TODO-2: add extra functions to set values needed for light clustering here
 }
 
 export class Camera {
-    uniforms: CameraUniforms = new CameraUniforms();
+    uniforms: CameraUniformsViews = new CameraUniformsViews();
     uniformsBuffer: GPUBuffer;
 
     projMat: Mat4 = mat4.create();
@@ -44,10 +51,13 @@ export class Camera {
         // note that you can add more variables (e.g. inverse proj matrix) to this buffer in later parts of the assignment
         this.uniformsBuffer = device.createBuffer({
             label: "uniforms",
-            size: this.uniforms.buffer.byteLength,
+            size: CameraUniformsValues.byteLength,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         this.projMat = mat4.perspective(toRadians(fovYDegrees), aspectRatio, Camera.nearPlane, Camera.farPlane);
+        
+        // TODO: reset on canvas resize?
+        this.uniforms.setResolution(canvas.width, canvas.height);
 
         this.rotateCamera(0, 0); // set initial camera vectors
 
@@ -137,12 +147,12 @@ export class Camera {
         const viewMat = mat4.lookAt(this.cameraPos, lookPos, [0, 1, 0]);
         const viewProjMat = mat4.mul(this.projMat, viewMat);
         // 1.1: set `this.uniforms.viewProjMat` to the newly calculated view proj mat
-        this.uniforms.viewProjMat = viewProjMat;
+        this.uniforms.setViewProj(viewProjMat);
 
         // TODO-2: write to extra buffers needed for light clustering here
 
         // 1.1: upload `this.uniforms.buffer` (host side) to `this.uniformsBuffer` (device side)
         // check `lights.ts` for examples of using `device.queue.writeBuffer()`
-        device.queue.writeBuffer(this.uniformsBuffer, 0, this.uniforms.buffer)
+        device.queue.writeBuffer(this.uniformsBuffer, 0, CameraUniformsValues)
     }
 }

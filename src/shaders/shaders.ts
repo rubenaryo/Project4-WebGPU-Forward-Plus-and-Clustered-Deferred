@@ -29,6 +29,16 @@ export const constants = {
     bindGroup_material: 2,
 
     moveLightsWorkgroupSize: 128,
+    
+    // Cluster counts in each dimension
+    clusterCountX: 16,
+    clusterCountY: 8,
+    clusterCountZ: 16,
+
+    // workgroup size for cluster rendering
+    clusterWorkgroupDimX: 8,
+    clusterWorkgroupDimY: 4,
+    clusterWorkgroupDimZ: 8,
 
     lightRadius: 2
 };

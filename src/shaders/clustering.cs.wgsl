@@ -1,5 +1,8 @@
 // TODO-2: implement the light clustering compute shader
 
+@group(${bindGroup_scene}) @binding(0) var<uniform> camUniforms: CameraUniforms;
+@group(${bindGroup_scene}) @binding(2) var<storage, read_write> clusterSet: ClusterSet;
+
 // ------------------------------------
 // Calculating cluster bounds:
 // ------------------------------------
@@ -21,3 +24,23 @@
 //         - Stop adding lights if the maximum number of lights is reached.
 
 //     - Store the number of lights assigned to this cluster.
+@compute
+@workgroup_size(${clusterWorkgroupDimX}, ${clusterWorkgroupDimY}, ${clusterWorkgroupDimZ})
+fn main(@builtin(global_invocation_id) globalIdx: vec3u)
+{
+    const numClustersX = ${clusterCountX};
+    const numClustersY = ${clusterCountY};
+    const numClustersZ = ${clusterCountZ};
+
+    if (globalIdx.x >= numClustersX || globalIdx.y >= numClustersY || globalIdx.z >= numClustersZ)
+    {
+        return;
+    }
+
+    // 3D -> 1D index
+    let clusterIndex = globalIdx.x * numClustersX * numClustersY + globalIdx.y * numClustersX + globalIdx.z;
+
+    let resolution = camUniforms.resolution;
+    let tileSizeX = resolution.x / numClustersX;
+    let tileSizeY = resolution.y / numClustersY;
+}
