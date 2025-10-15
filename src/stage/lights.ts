@@ -105,7 +105,7 @@ export class Lights {
         this.clusterSetArray = new Float32Array(MAX_CLUSTERS * CLUSTER_FLOAT_COUNT);
         this.clusterSetStorageBuffer = device.createBuffer({
             label: "clusterSet",
-            size: this.clusterSetArray.byteLength,
+            size: 16 + this.clusterSetArray.byteLength, // 16 for cluster count
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         });
 
@@ -118,7 +118,7 @@ export class Lights {
                     buffer: {type: "uniform"}
                 },
                 { // cluster set
-                    binding: 1,
+                    binding: 2,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: {type: "storage"}
                 }
@@ -134,7 +134,7 @@ export class Lights {
                     resource: { buffer: camera.uniformsBuffer }
                 },
                 {
-                    binding: 1,
+                    binding: 2,
                     resource: { buffer: this.clusterSetStorageBuffer}
                 }
             ]
@@ -177,8 +177,11 @@ export class Lights {
         computePass.setPipeline(this.clusteringComputePipeline);
         computePass.setBindGroup(0, this.clusteringComputeBindGroup);
         
-        const workgroupCount = 1;
-        computePass.dispatchWorkgroups(workgroupCount);
+        const numWorkgroupsX = Math.ceil(shaders.constants.clusterCountX / shaders.constants.clusterWorkgroupDimX);
+        const numWorkgroupsY = Math.ceil(shaders.constants.clusterCountY / shaders.constants.clusterWorkgroupDimY);
+        const numWorkgroupsZ = Math.ceil(shaders.constants.clusterCountZ / shaders.constants.clusterWorkgroupDimZ);
+        
+        computePass.dispatchWorkgroups(numWorkgroupsX, numWorkgroupsY, numWorkgroupsZ);
         computePass.end();
     }
 
@@ -198,8 +201,6 @@ export class Lights {
         computePass.dispatchWorkgroups(workgroupCount);
 
         computePass.end();
-
-        this.doLightClustering(encoder);
 
         device.queue.submit([encoder.finish()]);
     }

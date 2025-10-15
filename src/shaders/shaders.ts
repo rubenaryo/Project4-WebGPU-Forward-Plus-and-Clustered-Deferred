@@ -32,13 +32,14 @@ export const constants = {
     
     // Cluster counts in each dimension
     clusterCountX: 16,
-    clusterCountY: 8,
-    clusterCountZ: 16,
+    clusterCountY: 9,
+    clusterCountZ: 24,
 
     // workgroup size for cluster rendering
+    // 8 * 8 * 4 = 256 
     clusterWorkgroupDimX: 8,
-    clusterWorkgroupDimY: 4,
-    clusterWorkgroupDimZ: 8,
+    clusterWorkgroupDimY: 8,
+    clusterWorkgroupDimZ: 4,
 
     lightRadius: 2
 };

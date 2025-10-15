@@ -38,9 +38,19 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     }
 
     // 3D -> 1D index
-    let clusterIndex = globalIdx.x * numClustersX * numClustersY + globalIdx.y * numClustersX + globalIdx.z;
+    //let clusterIndex = globalIdx.x * numClustersX * numClustersY + globalIdx.y * numClustersX + globalIdx.z;
+    //let clusterIndex = globalIdx.z + globalIdx.y * numClustersZ + globalIdx.x * numClustersY * numClustersZ;
+    let clusterIndex = globalIdx.x + (globalIdx.y * numClustersX) + globalIdx.z * (numClustersX * numClustersY);
 
     let resolution = camUniforms.resolution;
     let tileSizeX = resolution.x / numClustersX;
     let tileSizeY = resolution.y / numClustersY;
+
+
+
+    let debugR = f32(globalIdx.x)/f32(numClustersX);
+    let debugG = f32(globalIdx.y)/f32(numClustersY);
+    let debugB = f32(globalIdx.z)/f32(numClustersZ);
+
+    clusterSet.clusters[clusterIndex].color = vec3f(debugR, debugG, 0.0);
 }
