@@ -2,15 +2,25 @@ import { Mat4, mat4, Vec3, vec3 } from "wgpu-matrix";
 import { toRadians } from "../math_util";
 import { device, canvas, fovYDegrees, aspectRatio } from "../renderer";
 
-const CameraUniformsValues = new ArrayBuffer(144);
+const CameraUniformsValues = new ArrayBuffer(208);
 class CameraUniformsViews {
-    private readonly viewProj = new Float32Array(CameraUniformsValues, 0, 16);
-    private readonly invViewProj = new Float32Array(CameraUniformsValues, 64, 16);
-    private readonly resolution = new Float32Array(CameraUniformsValues, 128, 2);
-    private readonly near = new Float32Array(CameraUniformsValues, 136, 1);
-    private readonly far = new Float32Array(CameraUniformsValues, 140, 1);
+    private readonly view = new Float32Array(CameraUniformsValues, 0, 16);
+    private readonly viewProj = new Float32Array(CameraUniformsValues, 64, 16);
+    private readonly invViewProj = new Float32Array(CameraUniformsValues, 128, 16);
+    private readonly resolution = new Float32Array(CameraUniformsValues, 192, 2);
+    private readonly near = new Float32Array(CameraUniformsValues, 200, 1);
+    private readonly far = new Float32Array(CameraUniformsValues, 204, 1);
 
-    setViewProj(mat: Float32Array) {
+    setView(mat: Float32Array)
+    {
+        for (let i = 0; i != 16; ++i)
+        {
+            this.view[i] = mat[i];
+        }
+    }
+
+    setViewProj(mat: Float32Array)
+    {
         // 1.1: set the first 16 elements of `this.floatView` to the input `mat`
         for (let i = 0; i != 16; ++i)
         {
@@ -18,7 +28,8 @@ class CameraUniformsViews {
         }
     }
 
-    setInvViewProj(mat: Float32Array) {
+    setInvViewProj(mat: Float32Array)
+    {
         for (let i = 0; i != 16; ++i)
         {
             this.invViewProj[i] = mat[i];
@@ -169,6 +180,7 @@ export class Camera {
         const viewMat = mat4.lookAt(this.cameraPos, lookPos, [0, 1, 0]);
         const viewProjMat = mat4.mul(this.projMat, viewMat);
         // 1.1: set `this.uniforms.viewProjMat` to the newly calculated view proj mat
+        this.uniforms.setView(viewMat);
         this.uniforms.setViewProj(viewProjMat);
         this.uniforms.setInvViewProj(mat4.inverse(viewProjMat));
 

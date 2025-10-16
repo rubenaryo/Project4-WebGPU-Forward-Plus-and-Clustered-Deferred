@@ -26,6 +26,7 @@ struct ClusterSet
 
 struct CameraUniforms {
     // 1.3: add an entry for the view proj mat (of type mat4x4f)
+    view: mat4x4f,
     viewProj: mat4x4f,
     invViewProj: mat4x4f,
     resolution: vec2f,

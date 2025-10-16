@@ -51,18 +51,25 @@ fn main(in: FragmentInput, @builtin(position) fragCoord: vec4f) -> @location(0) 
     const numClustersY = ${clusterCountY};
     const numClustersZ = ${clusterCountZ};
 
-    let viewSpacePos = camUniforms.viewProj * vec4f(in.pos, 1.0);
-    var clipSpacePos = viewSpacePos / viewSpacePos.w; // [-1, 1]
+    //var clipSpacePos = viewSpacePos / viewSpacePos.w; // [-1, 1]
 
     // Convert to [0, numClustersX/Y/Z]
-    clipSpacePos += vec4f(1.0, 1.0, 1.0, 0.0); // [0, 2]
-    clipSpacePos *= vec4f(0.5, 0.5, 0.5, 1.0); // [0, 1]
-    clipSpacePos *= vec4f(f32(numClustersX), f32(numClustersY), f32(numClustersZ), 1.0);
+    //clipSpacePos += vec4f(1.0, 1.0, 1.0, 0.0); // [0, 2]
+    //clipSpacePos *= vec4f(0.5, 0.5, 0.5, 1.0); // [0, 1]
+    //clipSpacePos *= vec4f(f32(numClustersX), f32(numClustersY), f32(numClustersZ), 1.0);
     
-    let clusterIdxX = floor(clipSpacePos.x);
-    let clusterIdxY = floor(clipSpacePos.y);
-    let clusterIdxZ = 0.0;
+    //var clusterIdxX = floor(clipSpacePos.x);
+    //var clusterIdxY = floor(clipSpacePos.y);
 
+    let clusterIdxX = u32(fragCoord.x / (camUniforms.resolution.x / f32(numClustersX)));
+    let clusterIdxY = u32(fragCoord.y / (camUniforms.resolution.y / f32(numClustersY)));
+
+    // Calculate Z using log depth formula
+    let viewSpacePos = camUniforms.view * vec4f(in.pos, 1.0);
+    let viewDepth = viewSpacePos.z;
+    let logDepth = log(viewDepth / camUniforms.near) / log(camUniforms.far / camUniforms.near);
+
+    let clusterIdxZ = u32(clamp(logDepth * f32(numClustersZ), 0.0, f32(numClustersZ - 1)));
     let tileSizeX = camUniforms.resolution.x / numClustersX;
     let tileSizeY = camUniforms.resolution.y / numClustersY;
     
@@ -71,8 +78,8 @@ fn main(in: FragmentInput, @builtin(position) fragCoord: vec4f) -> @location(0) 
     let clusterColor3f = clusterSet.clusters[clusterIndex].color;
 
     var clusterColor = vec4(clusterColor3f.x, clusterColor3f.y, clusterColor3f.z, 1.0);
-    return clusterColor;
+    return vec4(clusterColor.rgb, 1.0);
 
-    var finalColor = diffuseColor.rgb * totalLightContrib;
-    return vec4(finalColor, 1);
+    //var finalColor = diffuseColor.rgb * totalLightContrib;
+    //return vec4(finalColor, 1);
 }

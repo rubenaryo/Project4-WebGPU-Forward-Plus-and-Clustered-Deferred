@@ -23,6 +23,20 @@
 //         - Stop adding lights if the maximum number of lights is reached.
 
 //     - Store the number of lights assigned to this cluster.
+
+fn lightIntersection(clusterMin: vec3f, clusterMax: vec3f, lightPosView: vec3f) -> bool
+{
+    // If the bounding region for the cluster has any contribution from the light, return true
+    let lightRadius = ${lightRadius};
+
+    let boundaryPoint = clamp(lightPosView, clusterMin, clusterMax);
+    let toBoundaryPoint = boundaryPoint - lightPosView;
+    let sqDist = dot(toBoundaryPoint, toBoundaryPoint);
+    
+    // If the distance from the light to the closest point is less than the radius, this light affects the AABB.
+    return sqDist <= f32(lightRadius * lightRadius);
+}
+
 @compute
 @workgroup_size(${clusterWorkgroupDimX}, ${clusterWorkgroupDimY}, ${clusterWorkgroupDimZ})
 fn main(@builtin(global_invocation_id) globalIdx: vec3u)
@@ -56,12 +70,31 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     let clusterMinY = f32(globalIdx.y) * tileSizeY;
     let clusterMaxY = f32(globalIdx.y+1) * tileSizeY;
 
-    let clusterMinZ = f32(globalIdx.z) * tileSizeZ;
-    let clusterMaxZ = f32(globalIdx.z+1) * tileSizeZ;
+    // Compute z bounds by log depth
+    let logDepthMin = f32(globalIdx.z) * tileSizeZ;
+    let logDepthMax = f32(globalIdx.z+1) * tileSizeZ;
+
+    let clusterMinZ = near * pow(far/near, logDepthMin);
+    let clusterMaxZ = near * pow(far/near, logDepthMax);
 
     // Convert to View Space
     let clusterMin = camUniforms.invViewProj * vec4(clusterMinX, clusterMinY, clusterMinZ, 1.0);
     let clusterMax = camUniforms.invViewProj * vec4(clusterMaxX, clusterMaxY, clusterMaxZ, 1.0);
+
+    var numLightsInCluster = 0u;
+    for (var lightIdx = 0u; lightIdx < lightSet.numLights && numLightsInCluster < 512; lightIdx++) 
+    {
+        let light = lightSet.lights[lightIdx];
+        let lightPosView = camUniforms.viewProj * vec4(light.pos, 1.0);
+
+        if (lightIntersection(clusterMin.xyz, clusterMax.xyz, lightPosView.xyz))
+        {
+            // This light affects the cluster
+            clusterSet.clusters[clusterIndex].lights[numLightsInCluster] = lightIdx;
+            numLightsInCluster++;
+        }
+    }
+    clusterSet.clusters[clusterIndex].numLights = numLightsInCluster;
 
     //clusterSet.clusters[clusterIndex]
 
