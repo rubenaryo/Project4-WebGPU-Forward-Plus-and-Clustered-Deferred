@@ -18,7 +18,6 @@ export class Lights {
     static readonly numFloatsPerLight = 8; // vec3f is aligned at 16 byte boundaries
 
     static readonly lightIntensity = 0.1;
-    static readonly maxLightsPerCluster = 512;
 
     lightsArray = new Float32Array(Lights.maxNumLights * Lights.numFloatsPerLight);
     lightSetStorageBuffer: GPUBuffer;
@@ -102,7 +101,7 @@ export class Lights {
 
         // 2: initialize layouts, pipelines, textures, etc. needed for light clustering here
         const MAX_CLUSTERS = shaders.constants.clusterCountX * shaders.constants.clusterCountY * shaders.constants.clusterCountZ;
-        const CLUSTER_FLOAT_COUNT = Lights.maxLightsPerCluster + 4 + 4;
+        const CLUSTER_FLOAT_COUNT = shaders.constants.maxLightsPerCluster + 4 + 4;
         this.clusterSetArray = new Float32Array(MAX_CLUSTERS * CLUSTER_FLOAT_COUNT);
         this.clusterSetStorageBuffer = device.createBuffer({
             label: "clusterSet",

@@ -6,7 +6,7 @@ const CameraUniformsValues = new ArrayBuffer(208);
 class CameraUniformsViews {
     private readonly view = new Float32Array(CameraUniformsValues, 0, 16);
     private readonly viewProj = new Float32Array(CameraUniformsValues, 64, 16);
-    private readonly invViewProj = new Float32Array(CameraUniformsValues, 128, 16);
+    private readonly invProj = new Float32Array(CameraUniformsValues, 128, 16);
     private readonly resolution = new Float32Array(CameraUniformsValues, 192, 2);
     private readonly near = new Float32Array(CameraUniformsValues, 200, 1);
     private readonly far = new Float32Array(CameraUniformsValues, 204, 1);
@@ -28,11 +28,11 @@ class CameraUniformsViews {
         }
     }
 
-    setInvViewProj(mat: Float32Array)
+    setInvProj(mat: Float32Array)
     {
         for (let i = 0; i != 16; ++i)
         {
-            this.invViewProj[i] = mat[i];
+            this.invProj[i] = mat[i];
         }
     }
 
@@ -182,7 +182,7 @@ export class Camera {
         // 1.1: set `this.uniforms.viewProjMat` to the newly calculated view proj mat
         this.uniforms.setView(viewMat);
         this.uniforms.setViewProj(viewProjMat);
-        this.uniforms.setInvViewProj(mat4.inverse(viewProjMat));
+        this.uniforms.setInvProj(mat4.inverse(this.projMat));
 
         // TODO-2: write to extra buffers needed for light clustering here
 
