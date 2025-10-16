@@ -24,15 +24,16 @@
 
 //     - Store the number of lights assigned to this cluster.
 
-// ndcDepth = -1.0 for near plane, 1.0 for far plane
-fn ndcToView(ndcXY: vec2f, ndcDepth: f32) -> vec4f
+fn ndcToView(ndcXY: vec2f, viewSpaceDepth: f32) -> vec3f
 {
     let invProj = camUniforms.invProj;
 
-    let unprojected = invProj * vec4(ndcXY, ndcDepth, 1.0);
-    let viewSpacePos = unprojected / unprojected.w; // Persp divide
+    let unprojected = invProj * vec4(ndcXY, -1.0, 1.0); // Always unprojects to the near plane
+    let nearPlanePos = unprojected / unprojected.w; // Persp divide
 
-    return viewSpacePos;
+    let viewSpaceDist = viewSpaceDepth / -nearPlanePos.z;
+
+    return nearPlanePos.xyz * viewSpaceDist;
 }
 
 fn lightIntersection(clusterMin: vec3f, clusterMax: vec3f, lightPosView: vec3f) -> bool
@@ -69,6 +70,7 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     let resolution = camUniforms.resolution;
     let tileSizeX = resolution.x / numClustersX;
     let tileSizeY = resolution.y / numClustersY;
+    let tileSizeZ = (camUniforms.far - camUniforms.near) / numClustersZ;
 
     // In Pixel Space
     let clusterMinX = f32(globalIdx.x) * tileSizeX;
@@ -92,22 +94,22 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     let near = camUniforms.near;
     let far = camUniforms.far;
 
-    let logDepthMin = f32(globalIdx.z) / f32(numClustersZ);
-    let logDepthMax = f32(globalIdx.z+1) / f32(numClustersZ);
+    let logDepthMin = f32(globalIdx.z) * tileSizeZ;
+    let logDepthMax = f32(globalIdx.z+1) * tileSizeZ;
 
     let clusterNear = near * pow(far/near, logDepthMin);
     let clusterFar = near * pow(far/near, logDepthMax);
 
     // Convert NDC to view space
-    let clusterViewSpacePoints = array<vec4f, 8>(
-        ndcToView(clusterMinXMinY_ndc, -1.0),
-        ndcToView(clusterMinXMaxY_ndc, -1.0),
-        ndcToView(clusterMaxXMinY_ndc, -1.0),
-        ndcToView(clusterMaxXMaxY_ndc, -1.0),
-        ndcToView(clusterMinXMinY_ndc,  1.0),
-        ndcToView(clusterMinXMaxY_ndc,  1.0),
-        ndcToView(clusterMaxXMinY_ndc,  1.0),
-        ndcToView(clusterMaxXMaxY_ndc,  1.0)
+    let clusterViewSpacePoints = array<vec3f, 8>(
+        ndcToView(clusterMinXMinY_ndc, clusterNear),
+        ndcToView(clusterMinXMaxY_ndc, clusterNear),
+        ndcToView(clusterMaxXMinY_ndc, clusterNear),
+        ndcToView(clusterMaxXMaxY_ndc, clusterNear),
+        ndcToView(clusterMinXMinY_ndc, clusterFar),
+        ndcToView(clusterMinXMaxY_ndc, clusterFar),
+        ndcToView(clusterMaxXMinY_ndc, clusterFar),
+        ndcToView(clusterMaxXMaxY_ndc, clusterFar)
     );
 
     // Iterate over all the view space points to find the true min/max
@@ -120,13 +122,14 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
         clusterMax = max(clusterMax, clusterViewSpacePoints[i]);
     }
 
+    // Iterate over all the lights and determine if they would affect this cluster
     var numLightsInCluster = 0u;
     for (var lightIdx = 0u; lightIdx < lightSet.numLights && numLightsInCluster < ${maxLightsPerCluster}; lightIdx++) 
     {
         let light = lightSet.lights[lightIdx];
         let lightPosView = camUniforms.view * vec4(light.pos, 1.0);
 
-        if (lightIntersection(clusterMin.xyz, clusterMax.xyz, lightPosView.xyz))
+        if (lightIntersection(clusterMin, clusterMax, lightPosView.xyz))
         {
             // This light affects the cluster
             clusterSet.clusters[clusterIndex].lights[numLightsInCluster] = lightIdx;
