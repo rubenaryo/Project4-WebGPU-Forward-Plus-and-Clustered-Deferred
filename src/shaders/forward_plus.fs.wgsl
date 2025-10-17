@@ -50,7 +50,7 @@ fn main(in: FragmentInput, @builtin(position) fragCoord: vec4f) -> @location(0) 
     let viewDepth = viewSpacePos.z;
     let logDepth = log(-viewDepth / camUniforms.near) / log(camUniforms.far / camUniforms.near);
 
-    let clusterIdxZ = clamp(u32(logDepth * numClustersZ), 0, u32(numClustersZ) - 1u);
+    let clusterIdxZ = clamp(u32(logDepth * numClustersZ), 0u, u32(numClustersZ - 1u));
     
     // Only check lights that are in this cluster
     let clusterIndex = u32(clusterIdxX + (clusterIdxY * numClustersX) + clusterIdxZ * (numClustersX * numClustersY));
@@ -66,5 +66,5 @@ fn main(in: FragmentInput, @builtin(position) fragCoord: vec4f) -> @location(0) 
     }
 
     var finalColor = diffuseColor.rgb * totalLightContrib;
-    return vec4(finalColor, 1);
+    return vec4f(finalColor, 1.0);
 }

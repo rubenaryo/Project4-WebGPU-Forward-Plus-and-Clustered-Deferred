@@ -34,10 +34,10 @@ fn clipToView(clip : vec4f) -> vec4f
     return view;
 }
 
-fn screenToView(screen: vec4f) -> vec4f
+fn pixelToView(pixel: vec4f) -> vec4f
 {
-    let uv = (screen.xy / camUniforms.resolution);
-    let clip = vec4f(vec2f(uv.x, 1 - uv.y), screen.z, screen.w) * vec4f(2.0) - vec4f(1.0);
+    let uv = (pixel.xy / camUniforms.resolution);
+    let clip = vec4f(vec2f(uv.x, 1.0 - uv.y), pixel.z, pixel.w) * vec4f(2.0) - vec4f(1.0);
     return clipToView(clip);
 }
 
@@ -69,8 +69,6 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     }
 
     // 3D -> 1D index
-    //let clusterIndex = globalIdx.x * numClustersX * numClustersY + globalIdx.y * numClustersX + globalIdx.z;
-    //let clusterIndex = globalIdx.z + globalIdx.y * numClustersZ + globalIdx.x * numClustersY * numClustersZ;
     let clusterIndex = globalIdx.x + (globalIdx.y * numClustersX) + globalIdx.z * (numClustersX * numClustersY);
 
     let resolution = camUniforms.resolution;
@@ -87,9 +85,9 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     let clusterMinXMinY_pixel = vec4f(clusterMinX, clusterMinY, -1.0, 1.0);
     let clusterMaxXMaxY_pixel = vec4f(clusterMaxX, clusterMaxY, -1.0, 1.0);
 
-    // Convert to view space
-    let clusterMin_view = screenToView(clusterMinXMinY_pixel).xyz;
-    let clusterMax_view = screenToView(clusterMaxXMaxY_pixel).xyz;
+    // Convert to View space
+    let clusterMin_view = pixelToView(clusterMinXMinY_pixel).xyz;
+    let clusterMax_view = pixelToView(clusterMaxXMaxY_pixel).xyz;
 
     // Compute z bounds by log depth
     let near = camUniforms.near;
