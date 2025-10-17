@@ -13,7 +13,6 @@ struct LightSet {
 // TODO-2: you may want to create a ClusterSet struct similar to LightSet
 struct Cluster
 {
-    color: vec3f, // Debug
     numLights: u32,
     lights: array<u32, ${maxLightsPerCluster}>
 }

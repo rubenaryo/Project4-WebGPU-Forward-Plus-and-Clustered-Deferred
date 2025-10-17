@@ -121,10 +121,4 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
         }
     }
     clusterSet.clusters[clusterIndex].numLights = numLightsInCluster;
-
-    let debugR = f32(globalIdx.x)/f32(numClustersX);
-    let debugG = f32(globalIdx.y)/f32(numClustersY);
-    let debugB = f32(globalIdx.z)/f32(numClustersZ);
-
-    clusterSet.clusters[clusterIndex].color = vec3f(debugR, debugG, debugB);
 }
