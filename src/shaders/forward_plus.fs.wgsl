@@ -33,56 +33,37 @@ struct FragmentInput
 fn main(in: FragmentInput, @builtin(position) fragCoord: vec4f) -> @location(0) vec4f
 {
     let diffuseColor = textureSample(diffuseTex, diffuseTexSampler, in.uv);
-    if (diffuseColor.a < 0.5f) {
+    if (diffuseColor.a < 0.5) 
+    {
         discard;
     }
 
-    let pixelR = f32(fragCoord.x/camUniforms.resolution.x);
-    let pixelG = f32(fragCoord.y/camUniforms.resolution.y);
-    var pixelColor = vec4(pixelR, pixelG, 1.0, 1.0);
-    
     const numClustersX = ${clusterCountX};
     const numClustersY = ${clusterCountY};
     const numClustersZ = ${clusterCountZ};
-
-    //var clipSpacePos = viewSpacePos / viewSpacePos.w; // [-1, 1]
-
-    // Convert to [0, numClustersX/Y/Z]
-    //clipSpacePos += vec4f(1.0, 1.0, 1.0, 0.0); // [0, 2]
-    //clipSpacePos *= vec4f(0.5, 0.5, 0.5, 1.0); // [0, 1]
-    //clipSpacePos *= vec4f(f32(numClustersX), f32(numClustersY), f32(numClustersZ), 1.0);
     
-    //var clusterIdxX = floor(clipSpacePos.x);
-    //var clusterIdxY = floor(clipSpacePos.y);
-
-    let clusterIdxX = u32(fragCoord.x / (camUniforms.resolution.x / f32(numClustersX)));
-    let clusterIdxY = u32(fragCoord.y / (camUniforms.resolution.y / f32(numClustersY)));
+    let clusterIdxX = u32(f32(fragCoord.x) / f32(camUniforms.resolution.x) * f32(numClustersX));
+    let clusterIdxY = u32(f32(fragCoord.y) / f32(camUniforms.resolution.y) * f32(numClustersY));
 
     // Calculate Z using log depth formula
     let viewSpacePos = camUniforms.view * vec4f(in.pos, 1.0);
     let viewDepth = viewSpacePos.z;
-    let logDepth = log(viewDepth / camUniforms.near) / log(camUniforms.far / camUniforms.near);
+    let logDepth = log(-viewDepth / camUniforms.near) / log(camUniforms.far / camUniforms.near);
 
-    let clusterIdxZ = u32(clamp(logDepth * f32(numClustersZ), 0.0, f32(numClustersZ - 1)));
-    let tileSizeX = camUniforms.resolution.x / numClustersX;
-    let tileSizeY = camUniforms.resolution.y / numClustersY;
+    let clusterIdxZ = clamp(u32(logDepth * numClustersZ), 0, u32(numClustersZ) - 1u);
     
-    let clusterIndex = u32(clusterIdxX + (clusterIdxY * numClustersX) + clusterIdxZ * (numClustersX * numClustersY));
-    let numLights = clusterSet.clusters[clusterIndex].numLights;
-
     // Only check lights that are in this cluster
-    var totalLightContrib = vec3f(0, 0, 0);
+    let clusterIndex = u32(clusterIdxX + (clusterIdxY * numClustersX) + clusterIdxZ * (numClustersX * numClustersY));
+    let numLights = u32(clusterSet.clusters[clusterIndex].numLights);
+
+    const AMBIENT_LIGHT = 0.08;
+    var totalLightContrib = vec3f(AMBIENT_LIGHT);
     for (var lightIdx = 0u; lightIdx < numLights; lightIdx++) {
         
         let mainLightIndex = clusterSet.clusters[clusterIndex].lights[lightIdx];
         let light = lightSet.lights[mainLightIndex];
         totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor));
     }
-
-    let clusterColor3f = clusterSet.clusters[clusterIndex].color;
-
-    var clusterColor = vec4(clusterColor3f.x, clusterColor3f.y, clusterColor3f.z, 1.0);
-    //return clusterColor;
 
     var finalColor = diffuseColor.rgb * totalLightContrib;
     return vec4(finalColor, 1);

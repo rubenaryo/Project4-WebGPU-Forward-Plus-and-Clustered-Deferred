@@ -24,16 +24,21 @@
 
 //     - Store the number of lights assigned to this cluster.
 
-fn ndcToView(ndcXY: vec2f, viewSpaceDepth: f32) -> vec3f
+fn clipToView(clip : vec4f) -> vec4f
 {
     let invProj = camUniforms.invProj;
 
-    let unprojected = invProj * vec4(ndcXY, -1.0, 1.0); // Always unprojects to the near plane
-    let nearPlanePos = unprojected / unprojected.w; // Persp divide
+    var view = invProj * clip;
+    view = view / view.w;
+    
+    return view;
+}
 
-    let viewSpaceDist = viewSpaceDepth / -nearPlanePos.z;
-
-    return nearPlanePos.xyz * viewSpaceDist;
+fn screenToView(screen: vec4f) -> vec4f
+{
+    let uv = (screen.xy / camUniforms.resolution);
+    let clip = vec4f(vec2f(uv.x, 1 - uv.y), screen.z, screen.w) * vec4f(2.0) - vec4f(1.0);
+    return clipToView(clip);
 }
 
 fn lightIntersection(clusterMin: vec3f, clusterMax: vec3f, lightPosView: vec3f) -> bool
@@ -42,11 +47,12 @@ fn lightIntersection(clusterMin: vec3f, clusterMax: vec3f, lightPosView: vec3f) 
     let lightRadius = ${lightRadius};
 
     let boundaryPoint = clamp(lightPosView, clusterMin, clusterMax);
-    let toBoundaryPoint = boundaryPoint - lightPosView;
-    let sqDist = dot(toBoundaryPoint, toBoundaryPoint);
+
+    let lightToBoundary = lightPosView - boundaryPoint;
+    let sqDist = f32(dot(lightToBoundary, lightToBoundary));
     
     // If the distance from the light to the closest point is less than the radius, this light affects the AABB.
-    return sqDist <= f32(lightRadius * lightRadius);
+    return sqDist < f32(lightRadius * lightRadius);
 }
 
 @compute
@@ -70,7 +76,6 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     let resolution = camUniforms.resolution;
     let tileSizeX = resolution.x / numClustersX;
     let tileSizeY = resolution.y / numClustersY;
-    let tileSizeZ = (camUniforms.far - camUniforms.near) / numClustersZ;
 
     // In Pixel Space
     let clusterMinX = f32(globalIdx.x) * tileSizeX;
@@ -79,50 +84,29 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u)
     let clusterMinY = f32(globalIdx.y) * tileSizeY;
     let clusterMaxY = f32(globalIdx.y+1) * tileSizeY;
 
-    // Convert from pixel space to NDC
-    let clusterMinXMinY_pixel = vec2f(clusterMinX, clusterMinY);
-    let clusterMinXMaxY_pixel = vec2f(clusterMinX, clusterMaxY);
-    let clusterMaxXMinY_pixel = vec2f(clusterMaxX, clusterMinY);
-    let clusterMaxXMaxY_pixel = vec2f(clusterMaxX, clusterMaxY);
+    let clusterMinXMinY_pixel = vec4f(clusterMinX, clusterMinY, -1.0, 1.0);
+    let clusterMaxXMaxY_pixel = vec4f(clusterMaxX, clusterMaxY, -1.0, 1.0);
 
-    let clusterMinXMinY_ndc = ((clusterMinXMinY_pixel / resolution) * 2.0) - vec2f(1.0);
-    let clusterMinXMaxY_ndc = ((clusterMinXMaxY_pixel / resolution) * 2.0) - vec2f(1.0);
-    let clusterMaxXMinY_ndc = ((clusterMaxXMinY_pixel / resolution) * 2.0) - vec2f(1.0);
-    let clusterMaxXMaxY_ndc = ((clusterMaxXMaxY_pixel / resolution) * 2.0) - vec2f(1.0);
+    // Convert to view space
+    let clusterMin_view = screenToView(clusterMinXMinY_pixel).xyz;
+    let clusterMax_view = screenToView(clusterMaxXMaxY_pixel).xyz;
 
     // Compute z bounds by log depth
     let near = camUniforms.near;
     let far = camUniforms.far;
+    let clusterNear = -near * pow(far/near, f32(globalIdx.z)   / numClustersZ);
+    let clusterFar  = -near * pow(far/near, f32(globalIdx.z+1) / numClustersZ);
 
-    let logDepthMin = f32(globalIdx.z) * tileSizeZ;
-    let logDepthMax = f32(globalIdx.z+1) * tileSizeZ;
+    let minPointNear = clusterMin_view * (clusterNear / clusterMin_view.z);
+    let minPointFar  = clusterMin_view * (clusterFar  / clusterMin_view.z);
+    let maxPointNear = clusterMax_view * (clusterNear / clusterMax_view.z);
+    let maxPointFar  = clusterMax_view * (clusterFar  / clusterMax_view.z);
 
-    let clusterNear = near * pow(far/near, logDepthMin);
-    let clusterFar = near * pow(far/near, logDepthMax);
-
-    // Convert NDC to view space
-    let clusterViewSpacePoints = array<vec3f, 8>(
-        ndcToView(clusterMinXMinY_ndc, clusterNear),
-        ndcToView(clusterMinXMaxY_ndc, clusterNear),
-        ndcToView(clusterMaxXMinY_ndc, clusterNear),
-        ndcToView(clusterMaxXMaxY_ndc, clusterNear),
-        ndcToView(clusterMinXMinY_ndc, clusterFar),
-        ndcToView(clusterMinXMaxY_ndc, clusterFar),
-        ndcToView(clusterMaxXMinY_ndc, clusterFar),
-        ndcToView(clusterMaxXMaxY_ndc, clusterFar)
-    );
-
-    // Iterate over all the view space points to find the true min/max
-    var clusterMin = clusterViewSpacePoints[0];
-    var clusterMax = clusterViewSpacePoints[0];
-
-    for (var i = 1u; i < 8u; i++)
-    {
-        clusterMin = min(clusterMin, clusterViewSpacePoints[i]);
-        clusterMax = max(clusterMax, clusterViewSpacePoints[i]);
-    }
+    let clusterMin = min(min(minPointNear, minPointFar),min(maxPointNear, maxPointFar));
+    let clusterMax = max(max(minPointNear, minPointFar),max(maxPointNear, maxPointFar));
 
     // Iterate over all the lights and determine if they would affect this cluster
+    clusterSet.clusters[clusterIndex].numLights = 0u;
     var numLightsInCluster = 0u;
     for (var lightIdx = 0u; lightIdx < lightSet.numLights && numLightsInCluster < ${maxLightsPerCluster}; lightIdx++) 
     {

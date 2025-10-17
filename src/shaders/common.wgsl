@@ -15,7 +15,7 @@ struct Cluster
 {
     color: vec3f, // Debug
     numLights: u32,
-    lights: array<u32, 512>
+    lights: array<u32, ${maxLightsPerCluster}>
 }
 
 struct ClusterSet
