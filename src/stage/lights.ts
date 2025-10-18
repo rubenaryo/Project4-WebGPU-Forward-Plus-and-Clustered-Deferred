@@ -11,8 +11,8 @@ function hueToRgb(h: number) {
 }
 
 export class Lights {
-    numLights = 500;
-    static readonly maxNumLights = 5096;
+    numLights = 1024;
+    static readonly maxNumLights = 8192;
     static readonly numFloatsPerLight = 8; // vec3f is aligned at 16 byte boundaries
 
     static readonly lightIntensity = 0.1;

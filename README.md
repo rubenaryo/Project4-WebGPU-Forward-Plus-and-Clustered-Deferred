@@ -14,6 +14,8 @@ This WebGPU-based application is built to demonstrate the large performance diff
 
 [Live Demo](http://rubenaryo.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred)
 
+![](img/sponza_4k_2048.png)
+
 ### Forward+
 Forward+ builds on the traditional rendering pipeline by introducing tiled (or clustered) light culling. 
 
@@ -35,11 +37,30 @@ Resulting textures from the g-buffer pass:
 |:--:|:--:|:--:| 
 |Albedo|Normal|World-space position
 
-### Demo Videos
+### Examples
 
-| ![](img/sponza_naive_2048.mp4) | ![](img/sponza_deferred_2048.mp4) | ![](img/sponza_deferred_5096.mp4) | 
+| ![](img/sponza_naive_2048.gif) | ![](img/sponza_deferred_2048.gif) | ![](img/sponza_deferred_5096.gif) | 
 |:--:|:--:|:--:| 
-|Naive (2048 Lights)|Clustered Deferred (2048 Lights)|Clustered Deferred (5096 Lights)|
+|Naive (2048 Lights): 10FPS|Clustered Deferred (2048 Lights): 100FPS|Clustered Deferred (4096 Lights): 240FPS|
+
+## Performance
+
+### By Light Count
+Predictably, deferred shading has very good performance as the number of lights increases. Each new light adds further computation required per-fragment, so the reduction of wasted fragments gained from deferred shading is significant.
+
+However, we can see that deferred begins to approach forward+ at very high light counts. This is because each cluster has a hard cap on the number of lights it can contain (1024), so at very high lights we see maxed out clusters, yet lose on the performance overhead of the additional g-buffer pass.
+
+| ![](img/fpschart.png) | 
+|:--:| 
+| Note: FPS Cap is 240 due to VSync|
+
+### By Tile Count
+Looking at the performance by tile count, we can see that there is a performance boost from further dividing the screen in XY, but we see diminishing returns at higher tile counts and hit a hard buffer size limit at 36 x 37.
+
+| ![](img/dimchart.png) | 
+|:--:| 
+| Any performance gains for Forward+ disappear after about 16x9 |
+
 
 ### 
 
