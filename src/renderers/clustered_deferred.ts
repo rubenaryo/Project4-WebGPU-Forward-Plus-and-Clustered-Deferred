@@ -158,7 +158,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         // Pipelines
         this.gBufferPipeline = renderer.device.createRenderPipeline({
             layout: renderer.device.createPipelineLayout({
-                label: "f-plus pipeline layout",
+                label: "deferred g-buffer pipeline layout",
                 bindGroupLayouts: [
                     this.gBufferBindGroupLayout,
                     renderer.modelBindGroupLayout,
@@ -192,7 +192,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
 
         this.shadingPipeline = renderer.device.createRenderPipeline({
             layout: renderer.device.createPipelineLayout({
-                label: "f-plus pipeline layout",
+                label: "deferred shading pipeline layout",
                 bindGroupLayouts: [
                     this.gBufferBindGroupLayout,
                     renderer.modelBindGroupLayout,
@@ -226,8 +226,9 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         });
     }
 
-    doLightClustering(encoder: GPUCommandEncoder)
+    doLightClustering()
     {
+        let encoder = renderer.device.createCommandEncoder();
         this.lights.doLightClustering(encoder);
         renderer.device.queue.submit([encoder.finish()]);
     }
@@ -239,18 +240,18 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
             colorAttachments: [
                 {
                     view: this.albedoTextureView,
+                    clearValue: {r:0, g:0, b:0, a:1},
+                    loadOp: "clear",
+                    storeOp: "store"
+                },
+                {
+                    view: this.positionTextureView,
                     clearValue: {r:0, g:0, b:0, a:0},
                     loadOp: "clear",
                     storeOp: "store"
                 },
                 {
                     view: this.normalTextureView,
-                    clearValue: {r:0, g:0, b:0, a:0},
-                    loadOp: "clear",
-                    storeOp: "store"
-                },
-                {
-                    view: this.positionTextureView,
                     clearValue: {r:0, g:0, b:0, a:0},
                     loadOp: "clear",
                     storeOp: "store"
@@ -289,13 +290,13 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         return shadingRenderPassDesc
     }
 
-    doRenderPass(encoder: GPUCommandEncoder, passDescriptor: GPURenderPassDescriptor)
+    doGBufferPass(pipeline: GPURenderPipeline, passDescriptor: GPURenderPassDescriptor)
     {
+        let encoder = renderer.device.createCommandEncoder();
         const renderPass = encoder.beginRenderPass(passDescriptor);
-        renderPass.setPipeline(this.gBufferPipeline);
+        renderPass.setPipeline(pipeline);
 
         renderPass.setBindGroup(shaders.constants.bindGroup_scene, this.gBufferBindGroup);
-        renderPass.setBindGroup(shaders.constants.bindGroup_shading, this.shadingBindGroup);
 
         this.scene.iterate(node => {
             renderPass.setBindGroup(shaders.constants.bindGroup_model, node.modelBindGroup);
@@ -312,11 +313,24 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         renderer.device.queue.submit([encoder.finish()]);
     }
 
-    override draw() {
+    doFullscreenPass(pipeline: GPURenderPipeline, passDescriptor: GPURenderPassDescriptor)
+    {
+        let encoder = renderer.device.createCommandEncoder();
+        const renderPass = encoder.beginRenderPass(passDescriptor);
         
-        const encoder = renderer.device.createCommandEncoder();        
-        this.doLightClustering(encoder);
-        this.doRenderPass(encoder, this.getGBufferRenderPassDescriptor());
-        this.doRenderPass(encoder, this.getShadingRenderPassDescriptor());
+        renderPass.setPipeline(pipeline);
+        renderPass.setBindGroup(shaders.constants.bindGroup_scene, this.gBufferBindGroup);
+        renderPass.setBindGroup(shaders.constants.bindGroup_shading, this.shadingBindGroup);
+        renderPass.draw(6);
+        renderPass.end();
+
+        renderer.device.queue.submit([encoder.finish()]);
+    }
+
+    override draw()
+    {
+        this.doLightClustering();
+        this.doGBufferPass(this.gBufferPipeline, this.getGBufferRenderPassDescriptor());
+        this.doFullscreenPass(this.shadingPipeline, this.getShadingRenderPassDescriptor());
     }
 }
