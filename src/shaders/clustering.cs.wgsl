@@ -44,15 +44,13 @@ fn pixelToView(pixel: vec4f) -> vec4f
 fn lightIntersection(clusterMin: vec3f, clusterMax: vec3f, lightPosView: vec3f) -> bool
 {
     // If the bounding region for the cluster has any contribution from the light, return true
-    let lightRadius = ${lightRadius};
-
     let boundaryPoint = clamp(lightPosView, clusterMin, clusterMax);
 
     let lightToBoundary = lightPosView - boundaryPoint;
     let sqDist = f32(dot(lightToBoundary, lightToBoundary));
     
     // If the distance from the light to the closest point is less than the radius, this light affects the AABB.
-    return sqDist < f32(lightRadius * lightRadius);
+    return sqDist < f32(LIGHT_RADIUS * LIGHT_RADIUS);
 }
 
 @compute
