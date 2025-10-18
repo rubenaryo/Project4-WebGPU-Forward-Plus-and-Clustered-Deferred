@@ -52,7 +52,7 @@ class CameraUniformsViews {
         this.far[0] = f;
     }
 
-    // TODO-2: add extra functions to set values needed for light clustering here
+    // 2: add extra functions to set values needed for light clustering here
 }
 
 export class Camera {
@@ -86,8 +86,7 @@ export class Camera {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
         this.projMat = mat4.perspective(toRadians(fovYDegrees), aspectRatio, Camera.nearPlane, Camera.farPlane);
-        
-        // TODO: reset on canvas resize?
+
         this.uniforms.setResolution(canvas.width, canvas.height);
         this.uniforms.setNear(Camera.nearPlane);
         this.uniforms.setFar(Camera.farPlane);
@@ -184,7 +183,7 @@ export class Camera {
         this.uniforms.setViewProj(viewProjMat);
         this.uniforms.setInvProj(mat4.inverse(this.projMat));
 
-        // TODO-2: write to extra buffers needed for light clustering here
+        // 2: write to extra buffers needed for light clustering here
 
         // 1.1: upload `this.uniforms.buffer` (host side) to `this.uniformsBuffer` (device side)
         // check `lights.ts` for examples of using `device.queue.writeBuffer()`

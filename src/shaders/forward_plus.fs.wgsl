@@ -1,4 +1,4 @@
-// TODO-2: implement the Forward+ fragment shader
+// 2: implement the Forward+ fragment shader
 
 // See naive.fs.wgsl for basic fragment shader setup; this shader should use light clusters instead of looping over all lights
 
@@ -56,13 +56,13 @@ fn main(in: FragmentInput, @builtin(position) fragCoord: vec4f) -> @location(0) 
     let clusterIndex = u32(clusterIdxX + (clusterIdxY * numClustersX) + clusterIdxZ * (numClustersX * numClustersY));
     let numLights = u32(clusterSet.clusters[clusterIndex].numLights);
 
-    const AMBIENT_LIGHT = 0.08;
+    const AMBIENT_LIGHT = 0.00;
     var totalLightContrib = vec3f(AMBIENT_LIGHT);
     for (var lightIdx = 0u; lightIdx < numLights; lightIdx++) {
         
         let mainLightIndex = clusterSet.clusters[clusterIndex].lights[lightIdx];
         let light = lightSet.lights[mainLightIndex];
-        totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor));
+        totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor), ${lightRadius});
     }
 
     var finalColor = diffuseColor.rgb * totalLightContrib;

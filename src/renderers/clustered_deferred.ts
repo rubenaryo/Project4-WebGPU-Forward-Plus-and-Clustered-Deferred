@@ -9,7 +9,7 @@ const DEPTH_TEXTURE_FORMAT = 'depth24plus';
 
 export class ClusteredDeferredRenderer extends renderer.Renderer
 {
-    // TODO-3: add layouts, pipelines, textures, etc. needed for Forward+ here
+    // 3: add layouts, pipelines, textures, etc. needed for Forward+ here
     // you may need extra uniforms such as the camera view matrix and the canvas resolution
 
     gBufferBindGroupLayout: GPUBindGroupLayout;
@@ -62,7 +62,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
 
         this.depthTexture = renderer.device.createTexture({
             size: [renderer.canvas.width, renderer.canvas.height],
-            format: "depth24plus",
+            format: DEPTH_TEXTURE_FORMAT,
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         });
         this.depthTextureView = this.depthTexture.createView();
@@ -189,7 +189,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
             depthStencil: {
                 depthWriteEnabled: true,
                 depthCompare: "less",
-                format: "depth24plus"
+                format: DEPTH_TEXTURE_FORMAT
             },
             vertex: {
                 module: renderer.device.createShaderModule({

@@ -1,6 +1,3 @@
-// TODO-3: implement the Clustered Deferred fullscreen fragment shader
-
-// Similar to the Forward+ fragment shader, but with vertex information coming from the G-buffer instead.
 @group(0) @binding(0) var<uniform> camUniforms: CameraUniforms;
 
 @group(1) @binding(0) var<storage, read> lightSet: LightSet;
@@ -45,13 +42,13 @@ fn main(in: FragmentInput) -> @location(0) vec4f
     let clusterIndex = u32(clusterIdxX + (clusterIdxY * numClustersX) + clusterIdxZ * (numClustersX * numClustersY));
     let numLights = u32(clusterSet.clusters[clusterIndex].numLights);
 
-    const AMBIENT_LIGHT = 0.08;
+    const AMBIENT_LIGHT = 0.00;
     var totalLightContrib = vec3f(AMBIENT_LIGHT);
     for (var lightIdx = 0u; lightIdx < numLights; lightIdx++) {
         
         let mainLightIndex = clusterSet.clusters[clusterIndex].lights[lightIdx];
         let light = lightSet.lights[mainLightIndex];
-        totalLightContrib += calculateLightContrib(light, position.xyz, normalize(normal.xyz));
+        totalLightContrib += calculateLightContrib(light, position.xyz, normalize(normal.xyz), ${lightRadius});
     }
 
     var finalColor = albedo.rgb * totalLightContrib;

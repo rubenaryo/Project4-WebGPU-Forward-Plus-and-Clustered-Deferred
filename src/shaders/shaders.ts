@@ -42,7 +42,7 @@ export const constants = {
     clusterWorkgroupDimY: 8,
     clusterWorkgroupDimZ: 4,
 
-    maxLightsPerCluster: 512,
+    maxLightsPerCluster: 1024,
 
     lightRadius: 2
 };
