@@ -184,7 +184,13 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
                 }),
                 targets: [
                     {
-                        format: renderer.canvasFormat,
+                        format: ALBEDO_TEXTURE_FORMAT,
+                    },
+                    {
+                        format: POSITION_TEXTURE_FORMAT,
+                    },
+                    {
+                        format: NORMAL_TEXTURE_FORMAT,
                     }
                 ]
             }
@@ -195,22 +201,15 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
                 label: "deferred shading pipeline layout",
                 bindGroupLayouts: [
                     this.gBufferBindGroupLayout,
-                    renderer.modelBindGroupLayout,
-                    renderer.materialBindGroupLayout,
                     this.shadingBindGroupLayout
                 ]
             }),
-            depthStencil: {
-                depthWriteEnabled: true,
-                depthCompare: "less",
-                format: "depth24plus"
-            },
             vertex: {
                 module: renderer.device.createShaderModule({
                     label: "clustered deferred full screen vs", // no fplus vs
                     code: shaders.clusteredDeferredFullscreenVertSrc
                 }),
-                buffers: [ renderer.vertexBufferLayout ]
+                buffers: [ ]
             },
             fragment: {
                 module: renderer.device.createShaderModule({
@@ -279,13 +278,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
                     loadOp: "clear",
                     storeOp: "store"
                 }
-            ],
-            depthStencilAttachment: {
-                view: this.depthTextureView,
-                depthClearValue: 1.0,
-                depthLoadOp: "clear",
-                depthStoreOp: "store"
-            }
+            ]
         };
         return shadingRenderPassDesc
     }
@@ -319,8 +312,8 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         const renderPass = encoder.beginRenderPass(passDescriptor);
         
         renderPass.setPipeline(pipeline);
-        renderPass.setBindGroup(shaders.constants.bindGroup_scene, this.gBufferBindGroup);
-        renderPass.setBindGroup(shaders.constants.bindGroup_shading, this.shadingBindGroup);
+        renderPass.setBindGroup(0, this.gBufferBindGroup);
+        renderPass.setBindGroup(1, this.shadingBindGroup);
         renderPass.draw(6);
         renderPass.end();
 
