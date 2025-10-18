@@ -30,6 +30,8 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
     depthTexture: GPUTexture;
     depthTextureView: GPUTextureView;
 
+    sampler: GPUSampler;
+
     gBufferPipeline: GPURenderPipeline;
     shadingPipeline: GPURenderPipeline;
 
@@ -64,6 +66,16 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
             usage: GPUTextureUsage.RENDER_ATTACHMENT
         });
         this.depthTextureView = this.depthTexture.createView();
+        
+        // Sampler
+        let samplerDescriptor: GPUSamplerDescriptor = {};
+        samplerDescriptor.magFilter = "linear";
+        samplerDescriptor.minFilter = "linear";
+        samplerDescriptor.mipmapFilter = "linear";
+        samplerDescriptor.addressModeU = "repeat";
+        samplerDescriptor.addressModeV = "repeat";
+
+        this.sampler = renderer.device.createSampler(samplerDescriptor);
 
         // Bind Groups
         this.gBufferBindGroupLayout = renderer.device.createBindGroupLayout({
@@ -122,6 +134,11 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
                     texture: {
                         sampleType: 'float'
                     }
+                },
+                { // textureSampler
+                    binding: 5,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: {}
                 }
             ]
         });
@@ -150,6 +167,10 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
                 {
                     binding: 4,
                     resource: this.normalTextureView
+                },
+                {
+                    binding: 5,
+                    resource: this.sampler
                 }
             ]
         });
@@ -311,6 +332,7 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         let encoder = renderer.device.createCommandEncoder();
         const renderPass = encoder.beginRenderPass(passDescriptor);
         
+        // Fullscreen pass is simple, only the basic bind groups and drawing only 6 verts for the screen quad.
         renderPass.setPipeline(pipeline);
         renderPass.setBindGroup(0, this.gBufferBindGroup);
         renderPass.setBindGroup(1, this.shadingBindGroup);
