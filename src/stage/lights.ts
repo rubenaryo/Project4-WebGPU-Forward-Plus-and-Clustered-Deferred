@@ -11,8 +11,6 @@ function hueToRgb(h: number) {
 }
 
 export class Lights {
-    private camera: Camera;
-
     numLights = 500;
     static readonly maxNumLights = 5096;
     static readonly numFloatsPerLight = 8; // vec3f is aligned at 16 byte boundaries
@@ -37,8 +35,6 @@ export class Lights {
     clusteringComputePipeline: GPUComputePipeline;
 
     constructor(camera: Camera) {
-        this.camera = camera;
-
         this.lightSetStorageBuffer = device.createBuffer({
             label: "lights",
             size: 16 + this.lightsArray.byteLength, // 16 for numLights + padding
