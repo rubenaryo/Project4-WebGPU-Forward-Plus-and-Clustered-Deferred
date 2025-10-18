@@ -226,21 +226,54 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         });
     }
 
-    override draw() {
-        // TODO-3: run the Forward+ rendering pass:
-        // - run the clustering compute shader
-        // - run the G-buffer pass, outputting position, albedo, and normals
-        // - run the fullscreen pass, which reads from the G-buffer and performs lighting calculations
-        const encoder = renderer.device.createCommandEncoder();
-        const canvasTextureView = renderer.context.getCurrentTexture().createView();
-
+    doLightClustering(encoder: GPUCommandEncoder)
+    {
         this.lights.doLightClustering(encoder);
+        renderer.device.queue.submit([encoder.finish()]);
+    }
 
-        const renderPass = encoder.beginRenderPass({
-            label: "f-plus render pass",
+    getGBufferRenderPassDescriptor()
+    {
+        let gbufferRenderPassDesc: GPURenderPassDescriptor = {
+            label: "g-buffer pass descriptor",
             colorAttachments: [
                 {
-                    view: canvasTextureView,
+                    view: this.albedoTextureView,
+                    clearValue: {r:0, g:0, b:0, a:0},
+                    loadOp: "clear",
+                    storeOp: "store"
+                },
+                {
+                    view: this.normalTextureView,
+                    clearValue: {r:0, g:0, b:0, a:0},
+                    loadOp: "clear",
+                    storeOp: "store"
+                },
+                {
+                    view: this.positionTextureView,
+                    clearValue: {r:0, g:0, b:0, a:0},
+                    loadOp: "clear",
+                    storeOp: "store"
+                }
+            ],
+            depthStencilAttachment: {
+                view: this.depthTextureView,
+                depthClearValue: 1.0,
+                depthLoadOp: "clear",
+                depthStoreOp: "store"
+            }
+        };
+
+        return gbufferRenderPassDesc;
+    }
+
+    getShadingRenderPassDescriptor()
+    {
+        let shadingRenderPassDesc: GPURenderPassDescriptor = {
+            label: "shading pass descriptor",
+            colorAttachments: [
+                {
+                    view: renderer.context.getCurrentTexture().createView(),
                     clearValue: [0, 0, 0, 0],
                     loadOp: "clear",
                     storeOp: "store"
@@ -252,11 +285,17 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
                 depthLoadOp: "clear",
                 depthStoreOp: "store"
             }
-        });
+        };
+        return shadingRenderPassDesc
+    }
+
+    doRenderPass(encoder: GPUCommandEncoder, passDescriptor: GPURenderPassDescriptor)
+    {
+        const renderPass = encoder.beginRenderPass(passDescriptor);
         renderPass.setPipeline(this.gBufferPipeline);
 
-        // 1.2: bind `this.sceneUniformsBindGroup` to index `shaders.constants.bindGroup_scene`
         renderPass.setBindGroup(shaders.constants.bindGroup_scene, this.gBufferBindGroup);
+        renderPass.setBindGroup(shaders.constants.bindGroup_shading, this.shadingBindGroup);
 
         this.scene.iterate(node => {
             renderPass.setBindGroup(shaders.constants.bindGroup_model, node.modelBindGroup);
@@ -271,5 +310,13 @@ export class ClusteredDeferredRenderer extends renderer.Renderer
         renderPass.end();
 
         renderer.device.queue.submit([encoder.finish()]);
+    }
+
+    override draw() {
+        
+        const encoder = renderer.device.createCommandEncoder();        
+        this.doLightClustering(encoder);
+        this.doRenderPass(encoder, this.getGBufferRenderPassDescriptor());
+        this.doRenderPass(encoder, this.getShadingRenderPassDescriptor());
     }
 }
