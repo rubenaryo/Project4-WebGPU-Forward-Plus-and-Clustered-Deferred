@@ -1,27 +1,47 @@
 WebGL Forward+ and Clustered Deferred Shading
 ======================
 
+* Ruben Young
+* Tested on: **Google Chrome 143.0.7479.0 (Official Build) canary (64-bit)** on
+  Windows 11 Version 24H2, AMD Ryzen 7 7800X3D, RTX 4080 SUPER
+
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 4**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) **Google Chrome 222.2** on
-  Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+## Description
+This WebGPU-based application is built to demonstrate the large performance difference between forward (naive), forward+, and clustered-lights deferred rendering using the CryTek Sponza demo scene.
 
 ### Live Demo
 
-[![](img/thumb.png)](http://TODO.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred)
+[Live Demo](http://rubenaryo.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred)
 
-### Demo Video/GIF
+### Forward+
+Forward+ builds on the traditional rendering pipeline by introducing tiled (or clustered) light culling. 
 
-[![](img/video.mp4)](TODO)
+Forward+ divides the scene according to view-space frusta, with each frustum maintaining a list of lights that affect it. At shading time, we now only have to calculate the contributions of the lights in our local frustum. This produces markedly better results than having to iterate over every light in the scene.
 
-### (TODO: Your README)
+This application further divides each frustum along the view-space Z-direction into clusters with log-depth widths. Because of this, we achieve higher resolution at points closer to the camera where detail matters more due to perspective projection. 
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+| ![](img/clustered.png) | 
+|:--:| 
+| Example of tiled space partitioning |
 
-This assignment has a considerable amount of performance analysis compared
-to implementation work. Complete the implementation early to leave time!
+### Deferred Rendering
+We also demonstrate how we can further optimize the scene by using deferred rendering. By separating the render pass into a g-buffer and a shading pass, we can reduce the waste of shading expensive fragments that will be drawn over later by instead only shading those that will be visible. 
+
+This is especially potent for this demo due to the high number of lights making the shading of each fragment much more expensive.
+
+Resulting textures from the g-buffer pass:
+| ![](img/albedo_gbuffer.png) | ![](img/normal_gbuffer.png) | ![](img/position_gbuffer.png) | 
+|:--:|:--:|:--:| 
+|Albedo|Normal|World-space position
+
+### Demo Videos
+
+| ![](img/sponza_naive_2048.mp4) | ![](img/sponza_deferred_2048.mp4) | ![](img/sponza_deferred_5096.mp4) | 
+|:--:|:--:|:--:| 
+|Naive (2048 Lights)|Clustered Deferred (2048 Lights)|Clustered Deferred (5096 Lights)|
+
+### 
 
 ### Credits
 
